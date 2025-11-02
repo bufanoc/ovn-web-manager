@@ -1,0 +1,62 @@
+name: Delegate merge on comment
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  delegate-merge:
+    if: github.event.issue.pull_request != null
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      checks: read
+    steps:
+      - name: Validate comment and author
+        uses: actions/github-script@v6
+        id: validate
+        with:
+          script: |
+            const comment = context.payload.comment;
+            const commenter = comment.user.login;
+            const body = comment.body.trim();
+            // Only allow the repository owner to trigger a merge with exactly "/merge"
+            if (commenter !== 'bufanoc') {
+              core.setFailed(`Unauthorized commenter: ${commenter}`);
+            }
+            if (body !== '/merge') {
+              core.setFailed('Comment body must be exactly "/merge" to trigger merge.');
+            }
+            return { ok: true };
+
+      - name: Attempt merge if PR is mergeable and checks passed
+        uses: actions/github-script@v6
+        id: merge
+        with:
+          script: |
+            const prNumber = context.payload.issue.number;
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+
+            if (pr.merged) {
+              core.setFailed('PR is already merged.');
+            }
+            if (pr.mergeable === false) {
+              core.setFailed('PR is not mergeable (mergeable === false). Resolve conflicts first.');
+            }
+
+            try {
+              await github.rest.pulls.merge({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber,
+                merge_method: 'squash'
+              });
+              core.info(`PR #${prNumber} merged successfully.`);
+            } catch (err) {
+              core.setFailed(`Merge failed: ${err.message}`);
+            }
