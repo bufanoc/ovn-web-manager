@@ -11,7 +11,7 @@ def get_all_routers():
         routers = ovn_client.get_logical_routers()
         return jsonify(routers)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500
 
 @logical_router_routes.route('/<router_id>', methods=['GET'])
 def get_router(router_id):
@@ -21,7 +21,7 @@ def get_router(router_id):
             return jsonify({"error": "Router not found"}), 404
         return jsonify(router)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500
 
 @logical_router_routes.route('/', methods=['POST'])
 def create_router():
@@ -34,7 +34,7 @@ def create_router():
         router = ovn_client.create_logical_router(data)
         return jsonify(router), 201
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500
 
 @logical_router_routes.route('/<router_id>', methods=['PUT'])
 def update_router(router_id):
@@ -49,7 +49,7 @@ def update_router(router_id):
             return jsonify({"error": "Router not found"}), 404
         return jsonify(router)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500
 
 @logical_router_routes.route('/<router_id>', methods=['DELETE'])
 def delete_router(router_id):
@@ -59,7 +59,7 @@ def delete_router(router_id):
             return jsonify({"error": "Router not found"}), 404
         return '', 204
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500
 
 @logical_router_routes.route('/<router_id>/ports', methods=['GET'])
 def get_router_ports(router_id):
@@ -67,4 +67,4 @@ def get_router_ports(router_id):
         ports = ovn_client.get_router_ports(router_id)
         return jsonify(ports)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500

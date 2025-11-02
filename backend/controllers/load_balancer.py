@@ -11,7 +11,7 @@ def get_all_load_balancers():
         load_balancers = ovn_client.get_load_balancers()
         return jsonify(load_balancers)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500
 
 @load_balancer_routes.route('/<lb_id>', methods=['GET'])
 def get_load_balancer(lb_id):
@@ -21,7 +21,7 @@ def get_load_balancer(lb_id):
             return jsonify({"error": "Load balancer not found"}), 404
         return jsonify(load_balancer)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500
 
 @load_balancer_routes.route('/', methods=['POST'])
 def create_load_balancer():
@@ -34,7 +34,7 @@ def create_load_balancer():
         load_balancer = ovn_client.create_load_balancer(data)
         return jsonify(load_balancer), 201
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500
 
 @load_balancer_routes.route('/<lb_id>', methods=['PUT'])
 def update_load_balancer(lb_id):
@@ -49,7 +49,7 @@ def update_load_balancer(lb_id):
             return jsonify({"error": "Load balancer not found"}), 404
         return jsonify(load_balancer)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500
 
 @load_balancer_routes.route('/<lb_id>', methods=['DELETE'])
 def delete_load_balancer(lb_id):
@@ -59,4 +59,4 @@ def delete_load_balancer(lb_id):
             return jsonify({"error": "Load balancer not found"}), 404
         return '', 204
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500

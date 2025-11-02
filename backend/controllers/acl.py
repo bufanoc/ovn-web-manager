@@ -11,7 +11,7 @@ def get_all_acls():
         acls = ovn_client.get_acls()
         return jsonify(acls)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500
 
 @acl_routes.route('/<switch_id>/acls', methods=['GET'])
 def get_switch_acls(switch_id):
@@ -19,7 +19,7 @@ def get_switch_acls(switch_id):
         acls = ovn_client.get_switch_acls(switch_id)
         return jsonify(acls)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500
 
 @acl_routes.route('/<switch_id>/acls', methods=['POST'])
 def create_acl(switch_id):
@@ -32,7 +32,7 @@ def create_acl(switch_id):
         acl = ovn_client.create_acl(switch_id, data)
         return jsonify(acl), 201
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500
 
 @acl_routes.route('/<switch_id>/acls/<acl_id>', methods=['DELETE'])
 def delete_acl(switch_id, acl_id):
@@ -42,4 +42,4 @@ def delete_acl(switch_id, acl_id):
             return jsonify({"error": "ACL not found"}), 404
         return '', 204
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500

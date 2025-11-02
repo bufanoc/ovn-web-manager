@@ -1,12 +1,29 @@
 import subprocess
 import json
 import os
+import re
 from typing import Dict, List, Optional
 
 class OVNClient:
     def __init__(self):
         # Use the correct socket path for OVN
         self.nb_db = os.getenv('OVN_NB_DB', "unix:/var/run/ovn/ovnnb_db.sock")
+    
+    def _sanitize_identifier(self, identifier: str) -> str:
+        """
+        Sanitize OVN identifiers to prevent command injection.
+        Allows only alphanumeric characters, hyphens, underscores, and dots.
+        """
+        if not identifier:
+            raise ValueError("Identifier cannot be empty")
+        
+        if not re.match(r'^[a-zA-Z0-9._-]+$', identifier):
+            raise ValueError("Invalid identifier format. Only alphanumeric, dots, hyphens, and underscores are allowed")
+        
+        if len(identifier) > 255:
+            raise ValueError("Identifier is too long")
+        
+        return identifier
 
     def _check_ovn_status(self) -> bool:
         """Check if OVN services are running"""
@@ -54,6 +71,9 @@ class OVNClient:
         name = switch_data.get("name")
         if not name:
             raise ValueError("Switch name is required")
+        
+        # Sanitize the name to prevent command injection
+        name = self._sanitize_identifier(name)
 
         command = ["ovn-nbctl", "ls-add", name]
         
@@ -67,6 +87,9 @@ class OVNClient:
         return self.get_logical_switch(name)
 
     def update_logical_switch(self, switch_id: str, switch_data: Dict) -> Optional[Dict]:
+        # Sanitize the switch_id to prevent command injection
+        switch_id = self._sanitize_identifier(switch_id)
+        
         if not self.get_logical_switch(switch_id):
             return None
 
@@ -74,13 +97,24 @@ class OVNClient:
         
         if "external_ids" in switch_data:
             for key, value in switch_data["external_ids"].items():
+                # Sanitize key and value
+                key = self._sanitize_identifier(key)
+                if not isinstance(value, str):
+                    value = str(value)
+                # Basic validation - no shell metacharacters
+                if any(c in value for c in ['$', '`', ';', '|', '&', '>', '<', '\n']):
+                    raise ValueError("Invalid characters in external_ids value")
                 command.extend(["set", "Logical_Switch", switch_id,
                               f"external_ids:{key}={value}"])
 
-        self._execute_ovn_command(command)
+        if len(command) > 1:
+            self._execute_ovn_command(command)
         return self.get_logical_switch(switch_id)
 
     def delete_logical_switch(self, switch_id: str) -> bool:
+        # Sanitize the switch_id to prevent command injection
+        switch_id = self._sanitize_identifier(switch_id)
+        
         if not self.get_logical_switch(switch_id):
             return False
 
@@ -89,6 +123,8 @@ class OVNClient:
         return True
 
     def get_switch_ports(self, switch_id: str) -> List[Dict]:
+        # Sanitize the switch_id to prevent command injection
+        switch_id = self._sanitize_identifier(switch_id)
         command = ["ovn-nbctl", "--format=json", "lsp-list", switch_id]
         try:
             output = self._execute_ovn_command(command)
@@ -106,6 +142,9 @@ class OVNClient:
         name = router_data.get("name")
         if not name:
             raise ValueError("Router name is required")
+        
+        # Sanitize the name to prevent command injection
+        name = self._sanitize_identifier(name)
 
         command = ["ovn-nbctl", "lr-add", name]
         self._execute_ovn_command(command)
@@ -124,6 +163,9 @@ class OVNClient:
             return None
 
     def update_logical_router(self, router_id: str, router_data: Dict) -> Optional[Dict]:
+        # Sanitize the router_id to prevent command injection
+        router_id = self._sanitize_identifier(router_id)
+        
         if not self.get_logical_router(router_id):
             return None
 
@@ -131,6 +173,13 @@ class OVNClient:
         
         if "external_ids" in router_data:
             for key, value in router_data["external_ids"].items():
+                # Sanitize key and value
+                key = self._sanitize_identifier(key)
+                if not isinstance(value, str):
+                    value = str(value)
+                # Basic validation - no shell metacharacters
+                if any(c in value for c in ['$', '`', ';', '|', '&', '>', '<', '\n']):
+                    raise ValueError("Invalid characters in external_ids value")
                 command.extend(["set", "Logical_Router", router_id,
                               f"external_ids:{key}={value}"])
 
@@ -139,6 +188,9 @@ class OVNClient:
         return self.get_logical_router(router_id)
 
     def delete_logical_router(self, router_id: str) -> bool:
+        # Sanitize the router_id to prevent command injection
+        router_id = self._sanitize_identifier(router_id)
+        
         if not self.get_logical_router(router_id):
             return False
 
@@ -147,6 +199,8 @@ class OVNClient:
         return True
 
     def get_router_ports(self, router_id: str) -> List[Dict]:
+        # Sanitize the router_id to prevent command injection
+        router_id = self._sanitize_identifier(router_id)
         command = ["ovn-nbctl", "--format=json", "lrp-list", router_id]
         try:
             output = self._execute_ovn_command(command)
@@ -169,6 +223,8 @@ class OVNClient:
             return []
 
     def get_switch_acls(self, switch_id: str) -> List[Dict]:
+        # Sanitize the switch_id to prevent command injection
+        switch_id = self._sanitize_identifier(switch_id)
         command = ["ovn-nbctl", "--format=json", "acl-list", switch_id]
         try:
             output = self._execute_ovn_command(command)
@@ -184,10 +240,28 @@ class OVNClient:
 
         if not all([switch_id, match]):
             raise ValueError("Switch ID and match criteria are required")
+        
+        # Sanitize inputs to prevent command injection
+        switch_id = self._sanitize_identifier(switch_id)
+        
+        # Validate direction and action are from allowed values
+        if direction not in ["to-lport", "from-lport"]:
+            raise ValueError("Direction must be 'to-lport' or 'from-lport'")
+        
+        if action not in ["allow", "allow-related", "drop", "reject"]:
+            raise ValueError("Action must be 'allow', 'allow-related', 'drop', or 'reject'")
+        
+        # Validate priority is numeric
+        try:
+            priority_int = int(priority)
+            if priority_int < 0 or priority_int > 32767:
+                raise ValueError("Priority must be between 0 and 32767")
+        except (ValueError, TypeError):
+            raise ValueError("Priority must be a valid integer")
 
         command = [
             "ovn-nbctl", "acl-add", switch_id,
-            direction, priority, match, action
+            direction, str(priority), match, action
         ]
         self._execute_ovn_command(command)
         return acl_data
@@ -195,6 +269,9 @@ class OVNClient:
     def delete_acl(self, switch_id: str, acl_id: str) -> bool:
         """Delete an ACL by its ID"""
         try:
+            # Sanitize inputs to prevent command injection
+            switch_id = self._sanitize_identifier(switch_id)
+            acl_id = self._sanitize_identifier(acl_id)
             command = ["ovn-nbctl", "acl-del", switch_id, acl_id]
             self._execute_ovn_command(command)
             return True
@@ -228,6 +305,13 @@ class OVNClient:
         
         if not name or not vip:
             raise ValueError("Load balancer name and VIP are required")
+        
+        # Sanitize the name to prevent command injection
+        name = self._sanitize_identifier(name)
+        
+        # Validate protocol
+        if protocol not in ["tcp", "udp", "sctp"]:
+            raise ValueError("Protocol must be 'tcp', 'udp', or 'sctp'")
 
         command = ["ovn-nbctl", "lb-add", name, vip, "", protocol]
         self._execute_ovn_command(command)
@@ -242,6 +326,9 @@ class OVNClient:
         return self.get_load_balancer(lb_id)
 
     def delete_load_balancer(self, lb_id: str) -> bool:
+        # Sanitize the lb_id to prevent command injection
+        lb_id = self._sanitize_identifier(lb_id)
+        
         if not self.get_load_balancer(lb_id):
             return False
 
@@ -281,6 +368,10 @@ class OVNClient:
         
         if not name or not switch_id:
             raise ValueError("Port name and switch ID are required")
+        
+        # Sanitize inputs to prevent command injection
+        name = self._sanitize_identifier(name)
+        switch_id = self._sanitize_identifier(switch_id)
 
         command = ["ovn-nbctl", "lsp-add", switch_id, name]
         self._execute_ovn_command(command)
@@ -288,35 +379,55 @@ class OVNClient:
         # Set port type if specified
         port_type = port_data.get("type")
         if port_type:
+            # Validate port type is from allowed values
+            allowed_types = ["", "router", "localnet", "localport", "l2gateway", "vtep", "external"]
+            if port_type not in allowed_types:
+                raise ValueError(f"Port type must be one of: {', '.join(allowed_types)}")
             command = ["ovn-nbctl", "lsp-set-type", name, port_type]
             self._execute_ovn_command(command)
         
         # Set addresses if specified
         addresses = port_data.get("addresses")
         if addresses:
+            # Validate addresses format (basic check)
+            if not isinstance(addresses, str):
+                raise ValueError("Addresses must be a string")
             command = ["ovn-nbctl", "lsp-set-addresses", name, addresses]
             self._execute_ovn_command(command)
         
         return {"name": name, "id": name, "switch_id": switch_id}
 
     def update_port(self, port_id: str, port_data: Dict) -> Optional[Dict]:
+        # Sanitize the port_id to prevent command injection
+        port_id = self._sanitize_identifier(port_id)
+        
         if not self.get_port(port_id):
             return None
 
         # Update port properties
         port_type = port_data.get("type")
         if port_type:
+            # Validate port type is from allowed values
+            allowed_types = ["", "router", "localnet", "localport", "l2gateway", "vtep", "external"]
+            if port_type not in allowed_types:
+                raise ValueError(f"Port type must be one of: {', '.join(allowed_types)}")
             command = ["ovn-nbctl", "lsp-set-type", port_id, port_type]
             self._execute_ovn_command(command)
         
         addresses = port_data.get("addresses")
         if addresses:
+            # Validate addresses format (basic check)
+            if not isinstance(addresses, str):
+                raise ValueError("Addresses must be a string")
             command = ["ovn-nbctl", "lsp-set-addresses", port_id, addresses]
             self._execute_ovn_command(command)
         
         return self.get_port(port_id)
 
     def delete_port(self, port_id: str) -> bool:
+        # Sanitize the port_id to prevent command injection
+        port_id = self._sanitize_identifier(port_id)
+        
         if not self.get_port(port_id):
             return False
 

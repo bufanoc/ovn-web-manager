@@ -11,7 +11,7 @@ def get_all_ports():
         ports = ovn_client.get_all_ports()
         return jsonify(ports)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500
 
 @port_routes.route('/<port_id>', methods=['GET'])
 def get_port(port_id):
@@ -21,7 +21,7 @@ def get_port(port_id):
             return jsonify({"error": "Port not found"}), 404
         return jsonify(port)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500
 
 @port_routes.route('/', methods=['POST'])
 def create_port():
@@ -34,7 +34,7 @@ def create_port():
         port = ovn_client.create_port(data)
         return jsonify(port), 201
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500
 
 @port_routes.route('/<port_id>', methods=['PUT'])
 def update_port(port_id):
@@ -49,7 +49,7 @@ def update_port(port_id):
             return jsonify({"error": "Port not found"}), 404
         return jsonify(port)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500
 
 @port_routes.route('/<port_id>', methods=['DELETE'])
 def delete_port(port_id):
@@ -59,4 +59,4 @@ def delete_port(port_id):
             return jsonify({"error": "Port not found"}), 404
         return '', 204
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "An error occurred processing your request"}), 500
