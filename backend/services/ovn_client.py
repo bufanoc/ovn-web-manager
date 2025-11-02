@@ -39,10 +39,14 @@ class OVNClient:
         return json.loads(output)
 
     def get_logical_switch(self, switch_id: str) -> Optional[Dict]:
-        command = ["ovn-nbctl", "--format=json", "ls-get", switch_id]
+        # Get all switches and find the specific one
         try:
-            output = self._execute_ovn_command(command)
-            return json.loads(output)
+            switches = self.get_logical_switches()
+            for switch in switches:
+                if isinstance(switch, dict):
+                    if switch.get('name') == switch_id or switch.get('uuid') == switch_id:
+                        return switch
+            return None
         except Exception:
             return None
 
@@ -108,10 +112,14 @@ class OVNClient:
         return {"name": name, "id": name}
 
     def get_logical_router(self, router_id: str) -> Optional[Dict]:
-        command = ["ovn-nbctl", "--format=json", "lr-get", router_id]
+        # Get all routers and find the specific one
         try:
-            output = self._execute_ovn_command(command)
-            return json.loads(output)
+            routers = self.get_logical_routers()
+            for router in routers:
+                if isinstance(router, dict):
+                    if router.get('name') == router_id or router.get('uuid') == router_id:
+                        return router
+            return None
         except Exception:
             return None
 
@@ -202,10 +210,14 @@ class OVNClient:
             return []
 
     def get_load_balancer(self, lb_id: str) -> Optional[Dict]:
-        command = ["ovn-nbctl", "--format=json", "lb-get", lb_id]
+        # Get all load balancers and find the specific one
         try:
-            output = self._execute_ovn_command(command)
-            return json.loads(output)
+            load_balancers = self.get_load_balancers()
+            for lb in load_balancers:
+                if isinstance(lb, dict):
+                    if lb.get('name') == lb_id or lb.get('uuid') == lb_id:
+                        return lb
+            return None
         except Exception:
             return None
 
@@ -252,10 +264,14 @@ class OVNClient:
             return []
 
     def get_port(self, port_id: str) -> Optional[Dict]:
-        command = ["ovn-nbctl", "--format=json", "lsp-get", port_id]
+        # Get all ports and find the specific one
         try:
-            output = self._execute_ovn_command(command)
-            return json.loads(output)
+            all_ports = self.get_all_ports()
+            for port in all_ports:
+                if isinstance(port, dict):
+                    if port.get('name') == port_id or port.get('uuid') == port_id:
+                        return port
+            return None
         except Exception:
             return None
 
