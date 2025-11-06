@@ -536,7 +536,7 @@ EOL
     
     # Start the frontend server using local serve
     echo "Starting frontend server..."
-    nohup ./node_modules/.bin/serve -s build --listen 0.0.0.0:3000 --cors > frontend.log 2>&1 &
+    nohup ./node_modules/.bin/serve -s build -l tcp://0.0.0.0:3000 --cors > frontend.log 2>&1 &
     
     # Wait a moment for the server to start
     sleep 2
