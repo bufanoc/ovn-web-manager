@@ -1,4 +1,4 @@
-# OVN Web Manager (In Development Pre Alpha state)
+# OVN Web Manager (in development pre-alpha state)
 
 This has been developed on Ubuntu 22.04 minimal server. For best results run it on that.
 Do not run this in production, it is not even close.
